@@ -17,3 +17,4 @@ Wallpaper website hosted on AWS
   - Consider rate limiting by IP address/email address (limit downloads to prevent download spam, uploads too, maybe. But they matter less from a financial perspective)
 - Lambda function to handle image upload
 
+- Bonus points for creating a CloudFormation template and deploying via CloudFormation stack
