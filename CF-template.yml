@@ -1,0 +1,256 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Metadata:
+    Generator: "former2"
+Description: ""
+Resources:
+    LambdaFunction:
+        Type: "AWS::Lambda::Function"
+        Properties:
+            Description: ""
+            Environment: 
+                Variables: 
+                    SNS_TOPIC_ARN: !Sub "arn:aws:sns:${AWS::Region}:${AWS::AccountId}:video2audio-topic"
+                    OUTPUT_BUCKET: !Ref S3Bucket3
+                    INPUT_BUCKET: !Ref S3Bucket2
+                    OUTPUT_BUCKET_REGION: !Ref AWS::Region
+            FunctionName: "video2audio-lambda"
+            Architectures: 
+              - "x86_64"
+            Code: 
+                ImageUri: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/video2audio:latest"
+            MemorySize: 2048
+            Role: !GetAtt IAMRole.Arn
+            Timeout: 300
+            TracingConfig: 
+                Mode: "PassThrough"
+            EphemeralStorage: 
+                Size: 4096
+
+    LambdaFunction2:
+        Type: "AWS::Lambda::Function"
+        Properties:
+            Description: ""
+            Environment: 
+                Variables: 
+                    CONVERT_LAMBDA_NAME: !Ref LambdaFunction
+                    OUTPUT_BUCKET: !Ref S3Bucket3
+                    INPUT_BUCKET: !Ref S3Bucket2
+            FunctionName: "upload-handler"
+            Handler: "lambda_function.lambda_handler"
+            Architectures: 
+              - "x86_64"
+            Code: 
+                S3Bucket: "prod-04-2014-tasks"
+                S3Key: !Sub "/snapshots/${AWS::AccountId}/upload-handler-9fe43bea-3d08-4160-85ed-c5f8efe90a66"
+                S3ObjectVersion: "F.ebArFq3is7g8xHcG_gVa.TvKJxJ2lV"
+            MemorySize: 128
+            Role: !GetAtt IAMRole2.Arn
+            Runtime: "python3.14"
+            Timeout: 3
+            TracingConfig: 
+                Mode: "PassThrough"
+            EphemeralStorage: 
+                Size: 512
+
+    IAMRole:
+        Type: "AWS::IAM::Role"
+        Properties:
+            Path: "/service-role/"
+            RoleName: "video2audio-lambda-role-3nkjd23d"
+            AssumeRolePolicyDocument: "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"lambda.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}"
+            MaxSessionDuration: 3600
+            ManagedPolicyArns: 
+              - !Sub "arn:aws:iam::${AWS::AccountId}:policy/service-role/AWSLambdaBasicExecutionRole-ad306f82-af64-4e32-b9d5-e7629ed3169d"
+
+    IAMRole2:
+        Type: "AWS::IAM::Role"
+        Properties:
+            Path: "/service-role/"
+            RoleName: "upload-handler-role-c6nklf6o"
+            AssumeRolePolicyDocument: "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"lambda.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}"
+            MaxSessionDuration: 3600
+            ManagedPolicyArns: 
+              - !Sub "arn:aws:iam::${AWS::AccountId}:policy/service-role/AWSLambdaBasicExecutionRole-7ec02972-8003-4af4-b143-d54801700eeb"
+
+    IAMRole3:
+        Type: "AWS::IAM::Role"
+        Properties:
+            Path: "/service-role/"
+            RoleName: "video2audio-role-nq9nifit"
+            AssumeRolePolicyDocument: "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"lambda.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}"
+            MaxSessionDuration: 3600
+            ManagedPolicyArns: 
+              - !Sub "arn:aws:iam::${AWS::AccountId}:policy/service-role/AWSLambdaBasicExecutionRole-84d6ed32-e152-411e-ab8e-edb7812d5797"
+
+    S3Bucket:
+        Type: "AWS::S3::Bucket"
+        Properties:
+            BucketName: "video2audio-frontend"
+            BucketEncryption: 
+                ServerSideEncryptionConfiguration: 
+                  - 
+                    ServerSideEncryptionByDefault: 
+                        SSEAlgorithm: "AES256"
+                    BucketKeyEnabled: true
+            CorsConfiguration: 
+                CorsRules: 
+                  - 
+                    AllowedHeaders: 
+                      - "*"
+                    AllowedMethods: 
+                      - "PUT"
+                      - "POST"
+                      - "GET"
+                      - "HEAD"
+                    AllowedOrigins: 
+                      - "http://localhost:5173"
+                      - "*"
+            WebsiteConfiguration: 
+                IndexDocument: "index.html"
+                ErrorDocument: "index.html"
+            OwnershipControls: 
+                Rules: 
+                  - 
+                    ObjectOwnership: "BucketOwnerEnforced"
+            PublicAccessBlockConfiguration: 
+                BlockPublicAcls: false
+                BlockPublicPolicy: false
+                IgnorePublicAcls: false
+                RestrictPublicBuckets: false
+
+    S3Bucket2:
+        Type: "AWS::S3::Bucket"
+        Properties:
+            BucketName: "video2audio-input-videos"
+            BucketEncryption: 
+                ServerSideEncryptionConfiguration: 
+                  - 
+                    ServerSideEncryptionByDefault: 
+                        SSEAlgorithm: "AES256"
+                    BucketKeyEnabled: true
+            LifecycleConfiguration: 
+                Rules: 
+                  - 
+                    Id: "autodelete-1-day"
+                    Status: "Enabled"
+                    ExpirationInDays: 1
+                    NoncurrentVersionExpirationInDays: 1
+                    Prefix: "user-uploads"
+            CorsConfiguration: 
+                CorsRules: 
+                  - 
+                    AllowedHeaders: 
+                      - "*"
+                    AllowedMethods: 
+                      - "PUT"
+                      - "POST"
+                      - "GET"
+                      - "HEAD"
+                    AllowedOrigins: 
+                      - "http://localhost:5173"
+                      - "*"
+            VersioningConfiguration: 
+                Status: "Enabled"
+            OwnershipControls: 
+                Rules: 
+                  - 
+                    ObjectOwnership: "BucketOwnerEnforced"
+            PublicAccessBlockConfiguration: 
+                BlockPublicAcls: true
+                BlockPublicPolicy: true
+                IgnorePublicAcls: true
+                RestrictPublicBuckets: true
+
+    S3Bucket3:
+        Type: "AWS::S3::Bucket"
+        Properties:
+            BucketName: "video2audio-output-audio"
+            BucketEncryption: 
+                ServerSideEncryptionConfiguration: 
+                  - 
+                    ServerSideEncryptionByDefault: 
+                        SSEAlgorithm: "AES256"
+                    BucketKeyEnabled: true
+            LifecycleConfiguration: 
+                Rules: 
+                  - 
+                    Id: "autodelete-1-day"
+                    Status: "Enabled"
+                    ExpirationInDays: 1
+                    NoncurrentVersionExpirationInDays: 1
+            OwnershipControls: 
+                Rules: 
+                  - 
+                    ObjectOwnership: "BucketOwnerEnforced"
+            PublicAccessBlockConfiguration: 
+                BlockPublicAcls: true
+                BlockPublicPolicy: true
+                IgnorePublicAcls: true
+                RestrictPublicBuckets: true
+
+    LogsLogGroup:
+        Type: "AWS::Logs::LogGroup"
+        Properties:
+            LogGroupName: !Sub "/aws/lambda/${LambdaFunction2}"
+
+    LogsLogGroup2:
+        Type: "AWS::Logs::LogGroup"
+        Properties:
+            LogGroupName: !Sub "/aws/lambda/${LambdaFunction}"
+
+    ApiGatewayV2Api:
+        Type: "AWS::ApiGatewayV2::Api"
+        Properties:
+            ApiKeySelectionExpression: "$request.header.x-api-key"
+            ProtocolType: "HTTP"
+            RouteSelectionExpression: "$request.method $request.path"
+            CorsConfiguration: 
+                AllowCredentials: false
+                AllowHeaders: 
+                  - "content-type"
+                AllowMethods: 
+                  - "POST"
+                  - "OPTIONS"
+                AllowOrigins: 
+                  - "http://localhost:5173"
+                  - !Sub "http://${S3Bucket}.s3-website-${AWS::Region}.amazonaws.com"
+                MaxAge: 0
+            DisableExecuteApiEndpoint: false
+
+    ApiGatewayV2Stage:
+        Type: "AWS::ApiGatewayV2::Stage"
+        Properties:
+            StageName: "$default"
+            StageVariables: {}
+            ApiId: !Ref ApiGatewayV2Api
+            DeploymentId: "086uku"
+            RouteSettings: {}
+            DefaultRouteSettings: 
+                DetailedMetricsEnabled: false
+            AutoDeploy: true
+
+    ApiGatewayV2Deployment:
+        Type: "AWS::ApiGatewayV2::Deployment"
+        Properties:
+            ApiId: !Ref ApiGatewayV2Api
+            Description: "Automatic deployment triggered by changes to the Api configuration"
+
+    ApiGatewayV2Deployment2:
+        Type: "AWS::ApiGatewayV2::Deployment"
+        Properties:
+            ApiId: !Ref ApiGatewayV2Api
+            Description: "Automatic deployment triggered by changes to the Api configuration"
+
+    ApiGatewayV2Integration:
+        Type: "AWS::ApiGatewayV2::Integration"
+        Properties:
+            ApiId: !Ref ApiGatewayV2Api
+            ConnectionType: "INTERNET"
+            Description: "Retrieves presigned s3 URL to upload video to"
+            IntegrationMethod: "POST"
+            IntegrationType: "AWS_PROXY"
+            IntegrationUri: !GetAtt LambdaFunction2.Arn
+            TimeoutInMillis: 30000
+            PayloadFormatVersion: "2.0"
+
+
