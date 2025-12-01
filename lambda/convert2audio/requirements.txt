@@ -1,0 +1,2 @@
+boto3
+moviepy==2.2.1
