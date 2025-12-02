@@ -11,6 +11,14 @@ output_bucket = os.environ.get("OUTPUT_BUCKET")
 convert_lambda_name = os.environ.get("CONVERT_LAMBDA_NAME")
 key_prefix = "user-uploads"
 
+cors_header = {
+    'Access-Control-Allow-Origin': '*'
+}
+json_cors_header = {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*'
+}
+
 def lambda_handler(event, context):
     try:
         body = json.loads(event.get('body', '{}'))
@@ -21,10 +29,7 @@ def lambda_handler(event, context):
         if not key:
             return {
                 'statusCode': 400,
-                'headers': {
-                    'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*'
-                },
+                'headers': json_cors_header,
                 'body': json.dumps({'message': 'Missing key parameter'})
             }
 
@@ -33,15 +38,12 @@ def lambda_handler(event, context):
             if not convert_lambda_name:
                 return {
                     'statusCode': 500,
-                    'headers': {
-                        'Content-Type': 'application/json',
-                        'Access-Control-Allow-Origin': '*'
-                    },
+                    'headers': json_cors_header,
                     'body': json.dumps({'message': 'CONVERT_LAMBDA_NAME not configured'})
                 }
-            
+
             full_key = f"{key_prefix}/{key}" if not key.startswith(key_prefix) else key
-            
+
             # Invoke the conversion Lambda
             response = lambda_client.invoke(
                 FunctionName=convert_lambda_name,
@@ -50,13 +52,10 @@ def lambda_handler(event, context):
                     'input_file': full_key
                 })
             )
-            
+
             return {
                 'statusCode': 200,
-                'headers': {
-                    'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*'
-                },
+                'headers': json_cors_header,
                 'body': json.dumps({
                     'message': 'Conversion started',
                     'statusCode': response['StatusCode']
@@ -69,17 +68,17 @@ def lambda_handler(event, context):
                     'headers': {'Access-Control-Allow-Origin': '*'},
                     'body': json.dumps({'message': 'OUTPUT_BUCKET not configured'})
                 }
-            
+
             # Convert key to MP3 filename
             # Remove prefix if present
             if key.startswith(key_prefix + '/'):
                 key = key.replace(key_prefix + '/', '')
-            
+
             # Remove extension and add .mp3
             mp3_key = key.rsplit('.', 1)[0] + '.mp3'
-            
+
             print(f"Checking for MP3 key: {mp3_key} in bucket: {output_bucket}")
-            
+
             # Check if file exists
             try:
                 s3.head_object(Bucket=output_bucket, Key=mp3_key)
@@ -92,7 +91,7 @@ def lambda_handler(event, context):
                 )
                 return {
                     'statusCode': 200,
-                    'headers': {'Access-Control-Allow-Origin': '*'},
+                    'headers': cors_header,
                     'body': json.dumps({'status': 'ready', 'presignedUrl': presigned_url})
                 }
             except ClientError as e:
@@ -101,7 +100,7 @@ def lambda_handler(event, context):
                 if error_code == '404':
                     return {
                         'statusCode': 202,
-                        'headers': {'Access-Control-Allow-Origin': '*'},
+                        'headers': cors_header,
                         'body': json.dumps({'status': 'processing'})
                     }
                 raise
@@ -121,18 +120,12 @@ def lambda_handler(event, context):
 
         return {
             'statusCode': 200,
-            'headers': {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
-            },
+            'headers': json_cors_header,
             'body': json.dumps({'presignedUrl': presigned_url})
         }
     except Exception as e:
         return {
             'statusCode': 500,
-            'headers': {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
-            },
+            'headers': json_cors_header,
             'body': json.dumps({'message': str(e)})
         }

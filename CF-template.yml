@@ -72,16 +72,6 @@ Resources:
             ManagedPolicyArns: 
               - !Sub "arn:aws:iam::${AWS::AccountId}:policy/service-role/AWSLambdaBasicExecutionRole-7ec02972-8003-4af4-b143-d54801700eeb"
 
-    IAMRole3:
-        Type: "AWS::IAM::Role"
-        Properties:
-            Path: "/service-role/"
-            RoleName: "video2audio-role-nq9nifit"
-            AssumeRolePolicyDocument: "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"lambda.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}"
-            MaxSessionDuration: 3600
-            ManagedPolicyArns: 
-              - !Sub "arn:aws:iam::${AWS::AccountId}:policy/service-role/AWSLambdaBasicExecutionRole-84d6ed32-e152-411e-ab8e-edb7812d5797"
-
     S3Bucket:
         Type: "AWS::S3::Bucket"
         Properties:
@@ -192,11 +182,13 @@ Resources:
         Type: "AWS::Logs::LogGroup"
         Properties:
             LogGroupName: !Sub "/aws/lambda/${LambdaFunction2}"
+            RetentionInDays: 7
 
     LogsLogGroup2:
         Type: "AWS::Logs::LogGroup"
         Properties:
             LogGroupName: !Sub "/aws/lambda/${LambdaFunction}"
+            RetentionInDays: 7
 
     ApiGatewayV2Api:
         Type: "AWS::ApiGatewayV2::Api"
@@ -223,23 +215,10 @@ Resources:
             StageName: "$default"
             StageVariables: {}
             ApiId: !Ref ApiGatewayV2Api
-            DeploymentId: "086uku"
             RouteSettings: {}
             DefaultRouteSettings: 
                 DetailedMetricsEnabled: false
             AutoDeploy: true
-
-    ApiGatewayV2Deployment:
-        Type: "AWS::ApiGatewayV2::Deployment"
-        Properties:
-            ApiId: !Ref ApiGatewayV2Api
-            Description: "Automatic deployment triggered by changes to the Api configuration"
-
-    ApiGatewayV2Deployment2:
-        Type: "AWS::ApiGatewayV2::Deployment"
-        Properties:
-            ApiId: !Ref ApiGatewayV2Api
-            Description: "Automatic deployment triggered by changes to the Api configuration"
 
     ApiGatewayV2Integration:
         Type: "AWS::ApiGatewayV2::Integration"
@@ -252,5 +231,12 @@ Resources:
             IntegrationUri: !GetAtt LambdaFunction2.Arn
             TimeoutInMillis: 30000
             PayloadFormatVersion: "2.0"
+
+    ApiGatewayV2Route:
+        Type: "AWS::ApiGatewayV2::Route"
+        Properties:
+            ApiId: !Ref ApiGatewayV2Api
+            RouteKey: "POST /upload-video"
+            Target: !Sub "integrations/${ApiGatewayV2Integration}"
 
 
